@@ -10,6 +10,7 @@ import { computed, onMounted, watch } from 'vue'
 import { toXml } from 'xast-util-to-xml'
 import { x } from 'xastscript'
 
+import { getDefaultKokoroModel } from '../../workers/kokoro/constants'
 import { useProvidersStore } from '../providers'
 
 export function toSignedPercent(value: number): string {
@@ -81,6 +82,27 @@ export const useSpeechStore = defineStore('speech', () => {
     return ['elevenlabs', 'microsoft-speech', 'azure-speech'].includes(activeSpeechProvider.value)
   })
 
+  function shouldInitializeKokoroDefaults() {
+    return activeSpeechProvider.value === 'speech-noop'
+      && !activeSpeechModel.value
+      && !activeSpeechVoiceId.value
+  }
+
+  async function initializeKokoroDefaults() {
+    if (!shouldInitializeKokoroDefaults())
+      return
+
+    const hasWebGPU = typeof navigator !== 'undefined' && !!navigator.gpu
+    activeSpeechProvider.value = 'kokoro-local'
+    activeSpeechModel.value = getDefaultKokoroModel(hasWebGPU)
+
+    const voices = await loadVoicesForProvider('kokoro-local')
+    if (!activeSpeechVoiceId.value && voices.length > 0) {
+      activeSpeechVoiceId.value = voices[0].id
+      activeSpeechVoice.value = voices[0]
+    }
+  }
+
   async function loadVoicesForProvider(provider: string) {
     if (!provider) {
       return []
@@ -130,7 +152,12 @@ export const useSpeechStore = defineStore('speech', () => {
 
   watch(
     () => providersStore.configuredSpeechProvidersMetadata.map(provider => provider.id),
-    (configuredProviderIds) => {
+    async (configuredProviderIds) => {
+      if (shouldInitializeKokoroDefaults() && configuredProviderIds.includes('kokoro-local')) {
+        await initializeKokoroDefaults()
+        return
+      }
+
       if (!activeSpeechProvider.value)
         return
 
@@ -150,9 +177,19 @@ export const useSpeechStore = defineStore('speech', () => {
   )
 
   onMounted(() => {
-    loadVoicesForProvider(activeSpeechProvider.value).then(() => {
+    void initializeKokoroDefaults().then(() => {
+      return loadVoicesForProvider(activeSpeechProvider.value)
+    }).then(() => {
       if (activeSpeechVoiceId.value) {
         activeSpeechVoice.value = availableVoices.value[activeSpeechProvider.value]?.find(voice => voice.id === activeSpeechVoiceId.value)
+      }
+
+      if (!activeSpeechVoiceId.value && activeSpeechProvider.value === 'kokoro-local') {
+        const firstVoice = availableVoices.value['kokoro-local']?.[0]
+        if (firstVoice) {
+          activeSpeechVoiceId.value = firstVoice.id
+          activeSpeechVoice.value = firstVoice
+        }
       }
     })
   })
