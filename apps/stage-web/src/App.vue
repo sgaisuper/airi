@@ -20,6 +20,7 @@ import { toast, Toaster } from 'vue-sonner'
 import PerformanceOverlay from './components/Devtools/PerformanceOverlay.vue'
 
 import { usePWAStore } from './stores/pwa'
+import { bootstrapOpenAIFromEnv } from './utils/bootstrap-openai'
 
 usePWAStore()
 
@@ -75,6 +76,8 @@ watch(settings.themeColorsHueDynamic, () => {
 onMounted(async () => {
   analyticsStore.initialize()
   cardStore.initialize()
+
+  await bootstrapOpenAIFromEnv()
 
   if (onboardingStore.needsOnboarding) {
     onboardingStore.showingSetup = true
