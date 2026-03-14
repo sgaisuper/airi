@@ -94,8 +94,9 @@ watch(activeSpeechProvider, async (newProvider, oldProvider) => {
   await providersStore.loadModelsForConfiguredProviders()
   await speechStore.loadVoicesForProvider(newProvider)
 
-  // Reset model and voice when switching providers (but not on initial load)
-  if (oldProvider !== undefined && oldProvider !== newProvider) {
+  // Preserve store-driven first-run initialization when switching away from the noop default.
+  // For regular user-driven provider switches, clear stale model/voice selections.
+  if (oldProvider !== undefined && oldProvider !== newProvider && oldProvider !== 'speech-noop') {
     activeSpeechModel.value = ''
     activeSpeechVoiceId.value = ''
     activeSpeechVoice.value = undefined
