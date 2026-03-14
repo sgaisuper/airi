@@ -23,6 +23,8 @@ import { breakpointsTailwind, useBreakpoints, useMouse } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
 
+import { captureRuntimeDiagnostic } from '../modules/runtime-diagnostics'
+
 const paused = ref(false)
 
 function handleSettingsOpen(open: boolean) {
@@ -70,6 +72,11 @@ let stopOnStopRecord: (() => void) | undefined
 
 async function startAudioInteraction() {
   try {
+    captureRuntimeDiagnostic('audio_interaction_start_requested', {
+      has_stream: !!stream.value,
+      supports_stream_input: shouldUseStreamInput.value,
+    })
+
     await initVAD()
     if (stream.value)
       await startVAD(stream.value)
@@ -88,11 +95,17 @@ async function startAudioInteraction() {
         await chatStore.ingest(text, { model: activeChatModel.value, chatProvider: provider as ChatProvider })
       }
       catch (err) {
+        captureRuntimeDiagnostic('audio_interaction_chat_ingest_failed', { error: err }, 'error')
         console.error('Failed to send chat from voice:', err)
       }
     })
   }
   catch (e) {
+    captureRuntimeDiagnostic('audio_interaction_init_failed', {
+      error: e,
+      has_stream: !!stream.value,
+      supports_stream_input: shouldUseStreamInput.value,
+    }, 'error')
     console.error('Audio interaction init failed:', e)
   }
 }
@@ -126,6 +139,8 @@ function stopAudioInteraction() {
 }
 
 watch(enabled, async (val) => {
+  captureRuntimeDiagnostic('audio_interaction_toggle', { enabled: val })
+
   if (val) {
     await startAudioInteraction()
   }
@@ -144,6 +159,11 @@ watch([stream, () => vadLoaded.value], async ([s, loaded]) => {
       await startVAD(s)
     }
     catch (e) {
+      captureRuntimeDiagnostic('audio_interaction_vad_restart_failed', {
+        error: e,
+        has_stream: !!s,
+        vad_loaded: loaded,
+      }, 'error')
       console.error('Failed to start VAD with stream:', e)
     }
   }

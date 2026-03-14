@@ -16,6 +16,7 @@ import { routes } from 'vue-router/auto-routes'
 import App from './App.vue'
 
 import { i18n } from './modules/i18n'
+import { captureRuntimeDiagnostic, installRuntimeDiagnostics } from './modules/runtime-diagnostics'
 
 import './modules/posthog'
 import '@proj-airi/font-cjkfonts-allseto/index.css'
@@ -46,15 +47,27 @@ router.afterEach(() => {
   NProgress.done()
 })
 
-createApp(App)
-  .use(MotionPlugin)
+const app = createApp(App)
+
+app.use(MotionPlugin)
   // TODO: Fix autoAnimatePlugin type error
   .use(autoAnimatePlugin as unknown as Plugin)
   .use(router)
   .use(pinia)
   .use(i18n)
   .use(Tres)
-  .mount('#app')
+
+installRuntimeDiagnostics(app, router)
+
+try {
+  captureRuntimeDiagnostic('app_mount_started')
+  app.mount('#app')
+  captureRuntimeDiagnostic('app_mount_completed')
+}
+catch (error) {
+  captureRuntimeDiagnostic('app_mount_failed', { error }, 'error')
+  throw error
+}
 
 if (import.meta.env.DEV && !import.meta.env.SSR) {
   function captureEvents(el: HTMLElement) {

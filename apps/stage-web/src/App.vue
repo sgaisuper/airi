@@ -11,6 +11,7 @@ import { useOnboardingStore } from '@proj-airi/stage-ui/stores/onboarding'
 import { useSettings } from '@proj-airi/stage-ui/stores/settings'
 import { useTheme } from '@proj-airi/ui'
 import { StageTransitionGroup } from '@proj-airi/ui-transitions'
+import { Analytics } from '@vercel/analytics/vue'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -19,6 +20,7 @@ import { toast, Toaster } from 'vue-sonner'
 
 import PerformanceOverlay from './components/Devtools/PerformanceOverlay.vue'
 
+import { captureRuntimeDiagnostic, runWithRuntimeDiagnostics } from './modules/runtime-diagnostics'
 import { usePWAStore } from './stores/pwa'
 import { bootstrapOpenAIFromEnv } from './utils/bootstrap-openai'
 
@@ -74,22 +76,31 @@ watch(settings.themeColorsHueDynamic, () => {
 
 // Initialize first-time setup check when app mounts
 onMounted(async () => {
-  analyticsStore.initialize()
-  cardStore.initialize()
+  captureRuntimeDiagnostic('app_root_mounted')
 
-  await bootstrapOpenAIFromEnv()
+  try {
+    await runWithRuntimeDiagnostics('analytics.initialize', async () => analyticsStore.initialize())
+    await runWithRuntimeDiagnostics('card.initialize', async () => cardStore.initialize())
+    await runWithRuntimeDiagnostics('bootstrap-openai', async () => bootstrapOpenAIFromEnv())
 
-  if (onboardingStore.needsOnboarding) {
-    onboardingStore.showingSetup = true
+    if (onboardingStore.needsOnboarding) {
+      captureRuntimeDiagnostic('onboarding_required')
+      onboardingStore.showingSetup = true
+    }
+
+    await runWithRuntimeDiagnostics('chat-session.initialize', async () => chatSessionStore.initialize())
+    await runWithRuntimeDiagnostics('mods-server-channel.initialize', async () => {
+      await serverChannelStore.initialize({ possibleEvents: ['ui:configure'] })
+    })
+    await runWithRuntimeDiagnostics('context-bridge.initialize', async () => contextBridgeStore.initialize())
+    await runWithRuntimeDiagnostics('character-orchestrator.initialize', async () => characterOrchestratorStore.initialize())
+    await runWithRuntimeDiagnostics('display-models.load-indexeddb', async () => displayModelsStore.loadDisplayModelsFromIndexedDB())
+    await runWithRuntimeDiagnostics('settings.initialize-stage-model', async () => settingsStore.initializeStageModel())
   }
-
-  await chatSessionStore.initialize()
-  await serverChannelStore.initialize({ possibleEvents: ['ui:configure'] }).catch(err => console.error('Failed to initialize Mods Server Channel in App.vue:', err))
-  await contextBridgeStore.initialize()
-  characterOrchestratorStore.initialize()
-
-  await displayModelsStore.loadDisplayModelsFromIndexedDB()
-  await settingsStore.initializeStageModel()
+  catch (error) {
+    captureRuntimeDiagnostic('app_root_initialization_failed', { error }, 'error')
+    throw error
+  }
 })
 
 onUnmounted(() => {
@@ -133,6 +144,7 @@ function handleSetupSkipped() {
   />
 
   <PerformanceOverlay />
+  <Analytics />
 </template>
 
 <style>

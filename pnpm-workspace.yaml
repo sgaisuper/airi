@@ -1,5 +1,4 @@
 catalogMode: prefer
-
 shellEmulator: true
 packages:
   - packages/**
@@ -54,6 +53,7 @@ catalog:
   '@types/splitpanes': ^2.2.6
   '@types/unist': ^3.0.3
   '@types/ws': ^8.18.1
+  '@vercel/analytics': ^2.0.1
   '@vueuse/core': 14.1.0
   '@xsai-ext/providers': ^0.4.3
   '@xsai/embed': ^0.4.3
