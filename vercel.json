@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm -F @proj-airi/stage-web run build && pnpm -F @proj-airi/docs run build:base && mv ./docs/.vitepress/dist ./apps/stage-web/dist/docs && cp ./apps/stage-web/dist/docs/sitemap.xml ./apps/stage-web/dist/sitemap.xml && pnpm -F @proj-airi/stage-ui run story:build-base && mv ./packages/stage-ui/.histoire/dist ./apps/stage-web/dist/ui",
+  "buildCommand": "pnpm build:vercel",
   "outputDirectory": "apps/stage-web/dist",
   "redirects": [
     {

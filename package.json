@@ -25,6 +25,7 @@
     "dev:packages": "pnpm -rF=\"./packages/*\" --parallel run dev",
     "build": "turbo run build -F=\"./packages/*\" -F=\"./apps/*\"",
     "build:web": "turbo run build -F @proj-airi/stage-web",
+    "build:vercel": "pnpm -F @proj-airi/stage-web run build && pnpm -F @proj-airi/docs run build:base && mv ./docs/.vitepress/dist ./apps/stage-web/dist/docs && cp ./apps/stage-web/dist/docs/sitemap.xml ./apps/stage-web/dist/sitemap.xml && pnpm -F @proj-airi/stage-ui run story:build-base && mv ./packages/stage-ui/.histoire/dist ./apps/stage-web/dist/ui",
     "build:tamagotchi": "pnpm -rF @proj-airi/stage-tamagotchi run app:build",
     "build:apps": "turbo run build -F=\"./apps/*\"",
     "build:packages": "turbo run build -F=\"./packages/*\"",
