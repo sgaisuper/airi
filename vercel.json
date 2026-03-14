@@ -1,0 +1,48 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm -F @proj-airi/stage-web run build && pnpm -F @proj-airi/docs run build:base && mv ./docs/.vitepress/dist ./apps/stage-web/dist/docs && cp ./apps/stage-web/dist/docs/sitemap.xml ./apps/stage-web/dist/sitemap.xml && pnpm -F @proj-airi/stage-ui run story:build-base && mv ./packages/stage-ui/.histoire/dist ./apps/stage-web/dist/ui",
+  "outputDirectory": "apps/stage-web/dist",
+  "redirects": [
+    {
+      "source": "/docs/zh-hans/:match*",
+      "destination": "/docs/zh-Hans/:match*",
+      "permanent": true
+    },
+    {
+      "source": "/docs/zh-hans",
+      "destination": "/docs/zh-Hans/",
+      "permanent": true
+    },
+    {
+      "source": "/docs/",
+      "destination": "/docs/en/",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/remote-assets/page-external-data/js/script.js",
+      "destination": "https://plausible.io/js/script.js"
+    },
+    {
+      "source": "/api/v1/page-external-data/submit",
+      "destination": "https://plausible.io/api/event"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
